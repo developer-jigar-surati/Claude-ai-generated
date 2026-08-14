@@ -2,6 +2,7 @@ import Link from "next/link";
 import StatCard from "@/components/StatCard";
 import LiveMonitor from "@/components/LiveMonitor";
 import AgentRow from "@/components/AgentRow";
+import ConnectionStatus from "@/components/ConnectionStatus";
 import { computeStats, listAgents } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
@@ -12,6 +13,7 @@ export default function OverviewPage() {
 
   return (
     <div className="space-y-6">
+      <ConnectionStatus />
       {/* Hero + Live monitor */}
       <section className="grid gap-4 lg:grid-cols-[1.7fr_1fr]">
         <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-700 via-brand-600 to-brand-800 p-6 text-white sm:p-8">
@@ -58,24 +60,24 @@ export default function OverviewPage() {
           tint="bg-rose-100 text-rose-600"
           value={stats.callsToday.toLocaleString()}
           label="Calls today"
-          delta={`+${stats.callsDeltaPct}%`}
-          deltaPositive
+          delta={`${stats.callsDeltaPct >= 0 ? "+" : ""}${stats.callsDeltaPct}%`}
+          deltaPositive={stats.callsDeltaPct >= 0}
         />
         <StatCard
           icon="🎯"
           tint="bg-emerald-100 text-emerald-600"
           value={`${stats.conversionRate}%`}
           label="Conversion rate"
-          delta={`+${stats.conversionDeltaPct}%`}
-          deltaPositive
+          delta={`${stats.conversionDeltaPct >= 0 ? "+" : ""}${stats.conversionDeltaPct}%`}
+          deltaPositive={stats.conversionDeltaPct >= 0}
         />
         <StatCard
           icon="💲"
           tint="bg-amber-100 text-amber-600"
           value={`$${stats.avgCostPerCall.toFixed(2)}`}
           label="Avg. cost / call"
-          delta={`${stats.costDeltaPct}%`}
-          deltaPositive={false}
+          delta={`${stats.costDeltaPct >= 0 ? "+" : ""}${stats.costDeltaPct}%`}
+          deltaPositive={stats.costDeltaPct <= 0}
         />
       </section>
 

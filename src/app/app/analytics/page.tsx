@@ -1,25 +1,16 @@
 import BarChart from "@/components/BarChart";
 import StatCard from "@/components/StatCard";
-import { computeStats, listAgents } from "@/lib/store";
+import { analyticsSeries, computeStats, listAgentsWithMetrics } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 
-// Deterministic 7-day series derived from current totals (demo data).
-const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-const SHAPE = [0.72, 0.85, 0.63, 0.95, 1, 0.48, 0.4];
-
 export default function AnalyticsPage() {
   const stats = computeStats();
-  const agents = listAgents();
+  const agents = listAgentsWithMetrics();
+  const series = analyticsSeries(7);
 
-  const callSeries = DAYS.map((label, i) => ({
-    label,
-    value: Math.round(stats.callsToday * SHAPE[i]),
-  }));
-  const convSeries = DAYS.map((label, i) => ({
-    label,
-    value: Math.round(stats.conversionsToday * SHAPE[i] * 6),
-  }));
+  const callSeries = series.map((s) => ({ label: s.label, value: s.calls }));
+  const convSeries = series.map((s) => ({ label: s.label, value: s.conversions }));
 
   return (
     <div className="space-y-6">
@@ -28,15 +19,15 @@ export default function AnalyticsPage() {
           Analytics
         </h1>
         <p className="text-sm text-slate-500">
-          Calls, conversions, and cost across all your voice agents.
+          Calls, conversions, and cost across all your voice agents — live from your database.
         </p>
       </div>
 
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard icon="📞" tint="bg-rose-100 text-rose-600" value={stats.callsToday.toLocaleString()} label="Calls today" delta={`+${stats.callsDeltaPct}%`} />
-        <StatCard icon="🎯" tint="bg-emerald-100 text-emerald-600" value={`${stats.conversionRate}%`} label="Conversion rate" delta={`+${stats.conversionDeltaPct}%`} />
-        <StatCard icon="⏱️" tint="bg-brand-100 text-brand-700" value="3m 41s" label="Avg. call duration" delta="+6.2%" deltaPositive={false} />
-        <StatCard icon="💲" tint="bg-amber-100 text-amber-600" value={`$${stats.avgCostPerCall.toFixed(2)}`} label="Avg. cost / call" delta={`${stats.costDeltaPct}%`} deltaPositive={false} />
+        <StatCard icon="📞" tint="bg-rose-100 text-rose-600" value={stats.callsToday.toLocaleString()} label="Calls today" delta={`${stats.callsDeltaPct >= 0 ? "+" : ""}${stats.callsDeltaPct}%`} deltaPositive={stats.callsDeltaPct >= 0} />
+        <StatCard icon="🎯" tint="bg-emerald-100 text-emerald-600" value={`${stats.conversionRate}%`} label="Conversion rate" delta={`${stats.conversionDeltaPct >= 0 ? "+" : ""}${stats.conversionDeltaPct}%`} deltaPositive={stats.conversionDeltaPct >= 0} />
+        <StatCard icon="✅" tint="bg-brand-100 text-brand-700" value={stats.conversionsToday.toLocaleString()} label="Conversions today" />
+        <StatCard icon="💲" tint="bg-amber-100 text-amber-600" value={`$${stats.avgCostPerCall.toFixed(2)}`} label="Avg. cost / call" delta={`${stats.costDeltaPct}%`} deltaPositive={stats.costDeltaPct <= 0} />
       </section>
 
       <section className="grid gap-4 lg:grid-cols-2">
@@ -46,8 +37,8 @@ export default function AnalyticsPage() {
           </h2>
           <BarChart data={callSeries} color="#7c3aed" />
           <div className="mt-2 flex justify-between text-[10px] text-slate-400">
-            {DAYS.map((d) => (
-              <span key={d}>{d}</span>
+            {series.map((s, i) => (
+              <span key={i}>{s.label}</span>
             ))}
           </div>
         </div>
@@ -57,8 +48,8 @@ export default function AnalyticsPage() {
           </h2>
           <BarChart data={convSeries} color="#10b981" />
           <div className="mt-2 flex justify-between text-[10px] text-slate-400">
-            {DAYS.map((d) => (
-              <span key={d}>{d}</span>
+            {series.map((s, i) => (
+              <span key={i}>{s.label}</span>
             ))}
           </div>
         </div>
@@ -74,7 +65,7 @@ export default function AnalyticsPage() {
               <tr className="border-b border-slate-100 text-left text-xs uppercase tracking-wide text-slate-400 dark:border-white/10">
                 <th className="py-2 font-medium">Agent</th>
                 <th className="py-2 font-medium">Direction</th>
-                <th className="py-2 font-medium">Calls</th>
+                <th className="py-2 font-medium">Calls today</th>
                 <th className="py-2 font-medium">Conversion</th>
                 <th className="py-2 font-medium">Cost / call</th>
                 <th className="py-2 font-medium">Status</th>
@@ -89,10 +80,17 @@ export default function AnalyticsPage() {
                   <td className="py-3 text-slate-600 dark:text-slate-300">{a.conversionRate}%</td>
                   <td className="py-3 text-slate-600 dark:text-slate-300">${a.avgCostPerCall.toFixed(2)}</td>
                   <td className="py-3">
-                    <span className="pill bg-emerald-50 text-emerald-600 capitalize">{a.status}</span>
+                    <span className={`pill capitalize ${a.status === "active" ? "bg-emerald-50 text-emerald-600" : "bg-amber-50 text-amber-600"}`}>{a.status}</span>
                   </td>
                 </tr>
               ))}
+              {agents.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="py-6 text-center text-slate-400">
+                    No agents yet.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

@@ -1,6 +1,10 @@
 import { INTEGRATIONS, INTEGRATION_KIND_LABEL } from "@/lib/integrations";
+import { features } from "@/lib/config";
+
+export const dynamic = "force-dynamic";
 
 export default function SettingsPage() {
+  const f = features();
   return (
     <div className="space-y-6">
       <div>
@@ -11,11 +15,25 @@ export default function SettingsPage() {
       </div>
 
       <section className="card p-5">
+        <h2 className="mb-1 text-sm font-bold text-slate-900 dark:text-white">Setup status</h2>
+        <p className="mb-3 text-xs text-slate-500">
+          These reflect your <code>.env</code> file. Empty keys just mean that feature runs in
+          simulation — the app still works.
+        </p>
+        <div className="grid gap-2 sm:grid-cols-2">
+          <StatusRow label="Database" ok={f.database} detail="SQLite (local file)" />
+          <StatusRow label="AI brain (Claude)" ok={f.llm} detail={f.llm ? f.model : "using built-in parser"} />
+          <StatusRow label="Voice calls (Vapi)" ok={f.voice} detail={f.voice ? "connected — real calls" : "simulated calls"} />
+          <StatusRow label="Mode" ok={!f.demoMode} detail={f.demoMode ? "Demo mode" : "Live mode"} />
+        </div>
+      </section>
+
+      <section className="card p-5">
         <h2 className="mb-3 text-sm font-bold text-slate-900 dark:text-white">Workspace</h2>
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <label className="label">Workspace name</label>
-            <input className="input" defaultValue="Acme Corp" />
+            <input className="input" defaultValue={f.workspaceName} />
           </div>
           <div>
             <label className="label">Default caller ID</label>
@@ -65,6 +83,24 @@ export default function SettingsPage() {
           ))}
         </div>
       </section>
+    </div>
+  );
+}
+
+function StatusRow({ label, ok, detail }: { label: string; ok: boolean; detail: string }) {
+  return (
+    <div className="flex items-center gap-3 rounded-xl border border-slate-200 p-3 dark:border-white/10">
+      <span
+        className={`grid h-8 w-8 place-items-center rounded-lg text-sm ${
+          ok ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500"
+        }`}
+      >
+        {ok ? "✓" : "○"}
+      </span>
+      <div className="flex-1">
+        <div className="text-sm font-semibold text-slate-900 dark:text-white">{label}</div>
+        <div className="text-xs text-slate-500">{detail}</div>
+      </div>
     </div>
   );
 }

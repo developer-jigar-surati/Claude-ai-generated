@@ -1,160 +1,143 @@
 # 🎙️ Voice Agent OS — Modular Voice Agent Platform (Voice Agent as a Service)
 
-Launch **inbound and outbound AI voice agents in under 2 minutes** using
-pre‑configured templates and a **no‑code interface** — everything tracked in one
-dashboard.
+Launch **inbound and outbound AI voice agents in minutes** using pre‑configured
+templates and a **no‑code interface** — everything tracked in one dashboard.
 
-This is a faithful, runnable rebuild of the platform shown in the reference
-screenshots: an Overview dashboard, a Create‑Agent template flow, My Agents,
-Analytics, and an SDK & API surface. Rather than building yet another voice
-*orchestration* engine, it focuses on the **operational layer** that most
-platforms leave out — intelligent rescheduling, rule‑based campaign scheduling,
-and enterprise integrations.
+This is a **fully working, data‑driven** app (not a mock‑up): a real database
+stores your agents and every call, the dashboard numbers are **calculated live
+from real call records**, you can **create, pause, delete agents and place
+calls** right from the UI, and it optionally plugs into **Claude** (for
+understanding callers) and **Vapi** (for placing real phone calls).
 
-> Built with Next.js (App Router) + TypeScript + Tailwind CSS. No external
-> services required — the whole product runs end‑to‑end with a built‑in mock
-> API so you can demo the flow instantly.
+> Works out of the box with **zero setup** — no accounts, no API keys. In this
+> “demo mode” calls are simulated but everything else is real (real database,
+> real records, real dashboards). Add keys later to go fully live.
 
 ---
 
-## ✨ What's inside (maps 1:1 to the screenshots)
+## 🚀 Quick start (for non‑technical users)
 
-| Screen | Route | What it does |
-| --- | --- | --- |
-| **Overview** | `/app/overview` | Hero “deploy in minutes”, **Live Operations Monitor** (animated waveform), stat cards (Active agents, Calls today, Conversion, Avg cost/call), Recent agents, Quick actions |
-| **Create Agent** | `/app/create` | Pick a predefined **inbound/outbound template** → configure identity → set **rules & integrations** → review → **deploy**. A 4‑step no‑code wizard |
-| **My Agents** | `/app/agents` | Inspect each agent, its rules and integrations, live metrics, and a **“try it” intelligent‑rescheduling demo** |
-| **Analytics** | `/app/analytics` | 7‑day calls & conversions charts (dependency‑free SVG) + per‑agent performance table |
-| **SDK & API** | `/app/sdk` | API keys, and copy‑paste cURL / Node SDK / campaign / webhook snippets |
-| **Settings** | `/app/settings` | Workspace defaults and connected CRM / ERP / calendar / telephony systems |
+You need **Node.js 18 or newer** installed ([download here](https://nodejs.org)).
+Then, in a terminal, inside this project folder:
 
-The three headline capabilities from the original pitch are all implemented as
-real, configurable features — see the worked examples below.
+```bash
+npm install       # 1. install (one time, ~1 min)
+npm run dev       # 2. start the app
+```
+
+Now open **http://localhost:3000** in your browser. That’s it. 🎉
+
+The first time it runs, it creates a local database and fills it with sample
+agents and call history so the dashboard isn’t empty.
+
+To stop the app, press `Ctrl + C` in the terminal.
+
+### Try it (everything is live)
+
+- **My Agents → Place test call** — runs a real call (simulated), detects the
+  caller’s intent, and saves the result. Watch the dashboard numbers change.
+- **My Agents → Run 10‑call campaign** — generates 10 calls at once.
+- **My Agents → the “Intelligent call rescheduling” box** — type what a customer
+  might say and see the agent decide what to do.
+- **Create Agent** — build a new agent in 4 steps; it’s saved permanently.
+- **Pause / Activate / Delete** — manage agents; changes persist.
 
 ---
 
-## 🧠 The three capabilities, explained with examples
+## 🔑 The `.env` file (plain‑English guide)
+
+`.env` is a small text file where you paste your keys. **You don’t need it to
+run the app** — skip this whole section and you get demo mode. Add it when
+you’re ready to turn features “live”.
+
+**How to set it up:**
+
+1. Make a copy of the example file and name it `.env`:
+   ```bash
+   cp .env.example .env
+   ```
+2. Open `.env` in any text editor and fill in only the lines you want.
+3. Save, then restart the app (`Ctrl + C`, then `npm run dev`).
+
+**What each setting does:**
+
+| Setting | What it’s for | Needed? | Where to get it |
+| --- | --- | --- | --- |
+| `WORKSPACE_NAME` | Your company name (shown in the header) | Optional | Just type it |
+| `ANTHROPIC_API_KEY` | The **AI brain** (Claude) that understands what callers mean | Optional | [console.anthropic.com](https://console.anthropic.com) → API Keys |
+| `ANTHROPIC_MODEL` | Which Claude model to use | Optional | Leave as `claude-opus-5` |
+| `VAPI_API_KEY` | Places **real phone calls** (voice + telephony) | Optional | [dashboard.vapi.ai](https://dashboard.vapi.ai) → API Keys |
+| `VAPI_PHONE_NUMBER_ID` | The number to call **from** | Optional | Vapi → Phone Numbers |
+| `TWILIO_ACCOUNT_SID` / `TWILIO_AUTH_TOKEN` | Alternative phone provider | Optional | [console.twilio.com](https://console.twilio.com) |
+| `DATABASE_FILE` | Where the local database file lives | Optional | Leave blank |
+
+**Demo mode vs Live mode** (shown as a banner on the Overview page and in Settings):
+
+| | No keys (Demo) | With `ANTHROPIC_API_KEY` | With `VAPI_API_KEY` |
+| --- | --- | --- | --- |
+| Database & dashboards | ✅ real | ✅ real | ✅ real |
+| Understanding callers | Built‑in parser | 🧠 **Claude** | 🧠 Claude |
+| Phone calls | Simulated | Simulated | ☎️ **Real calls** |
+
+Nothing breaks when a key is missing — that feature just runs in simulation.
+
+---
+
+## 🧠 The three capabilities, with examples
 
 ### 1) Intelligent Call Rescheduling
-
-If a customer says *“I’m busy, call me after 30 minutes,”* the agent understands
-the **intent** and reschedules automatically — no human needed.
-
-Try it live on any agent’s detail page (`/app/agents`), or see the logic in
-[`src/lib/intent.ts`](src/lib/intent.ts):
+Customer says *“I’m busy, call me after 30 minutes.”* → the agent understands
+the intent and reschedules automatically.
 
 ```text
-Customer says:  "I'm busy, call me after 30 minutes"
-      ↓  detectIntent()
-{ intent: "reschedule", delayMinutes: 30,
-  reason: 'Detected "call back in 30 minutes". Rescheduling the call.' }
+Customer: "I'm busy, call me after 30 minutes"
+   →  { intent: "reschedule", nextCallIn: "30 min" }
 ```
 
-More examples the parser handles out of the box:
-
-| Customer utterance | Detected intent | Next call |
-| --- | --- | --- |
-| “Try again in 2 hours” | `reschedule` | +2 h |
-| “Can you call me back tomorrow?” | `reschedule` | ~24 h |
-| “I’m busy, call me later” | `callback_unspecified` | agent’s default reschedule window |
-| “Not interested, stop calling” | `not_interested` | added to Do‑Not‑Call |
-| “Yes, that works” | `confirm` | booked |
+Try it live on any agent’s page. With no key it uses a built‑in parser; with
+`ANTHROPIC_API_KEY` set it uses **Claude** (the box even tells you which one
+answered). Logic: [`src/lib/intent.ts`](src/lib/intent.ts) + [`src/lib/llm.ts`](src/lib/llm.ts).
 
 ### 2) Rule‑Based Campaign Scheduling
-
-Create campaigns with configurable business rules **directly from the UI** — no
-code (see the Create‑Agent wizard, step 3):
-
-- ✅ Call only during business hours (with start/end times)
-- ✅ Respect customer time zones
-- ✅ Send appointment reminders **exactly N hours before** an appointment
-- ✅ Trigger feedback calls **N hours after** checkout / discharge
-- ✅ Max retries & intelligent reschedule window
-
-**Example — an “Appointment Reminder” campaign:**
-
-```jsonc
-{
-  "businessHoursOnly": true,
-  "businessHoursStart": "09:00",
-  "businessHoursEnd": "18:00",
-  "respectCustomerTimezone": true,
-  "reminderHoursBefore": 8,     // remind exactly 8h before the appointment
-  "feedbackHoursAfter": 24,     // feedback call 24h after the visit
-  "maxRetries": 2,
-  "rescheduleMinutes": 30
-}
-```
-
-The same rules are available programmatically via `client.campaigns.create({...})`
-(see the SDK page).
+Configure business rules from the UI (Create Agent → step 3), **no code**:
+business‑hours‑only + times, respect customer time zones, reminders **N hours
+before**, feedback calls **N hours after**, retries, and the reschedule window.
+Every agent stores its own rules in the database.
 
 ### 3) Enterprise Integrations
-
-Connect **CRM, ERP, calendars, and telephony** so agents can read/write real
-records and become production‑ready. Toggle them per‑agent in the wizard or
-manage them in Settings. Catalog lives in
-[`src/lib/integrations.ts`](src/lib/integrations.ts) (Salesforce, HubSpot, Zoho,
-SAP, Google/Outlook Calendar, Twilio, Zendesk).
-
-**Example flow:** a *Post‑Purchase Survey* agent finishes a call →
-`call.completed` webhook fires → collected fields (`CSAT`, open feedback) are
-written straight back to the CRM contact.
+Toggle **CRM / ERP / calendar / telephony** connections per agent (Salesforce,
+HubSpot, Zoho, SAP, Google/Outlook Calendar, Twilio, Zendesk) so calls read and
+write real records. Catalog: [`src/lib/integrations.ts`](src/lib/integrations.ts).
 
 ---
 
-## 🚀 Run it
-
-```bash
-npm install
-npm run dev
-# open http://localhost:3000  → redirects to /app/overview
-```
-
-Production build:
-
-```bash
-npm run build && npm run start
-```
-
-Requires Node 18+ (developed on Node 22).
-
----
-
-## 🏗️ Architecture
+## 🏗️ How it works (fully dynamic)
 
 ```
-Browser (Next.js App Router UI, Tailwind)
-        │  fetch()
-        ▼
-Route handlers  /api/agents  /api/stats        ← the "backend" for this MVP
-        │
-        ▼
-In‑memory store (src/lib/store.ts)             ← swap for a DB in production
-        │
-        ▼
-[ In production ] Voice orchestration layer
-   • Telephony:  Twilio / Vapi / Bolna
-   • Speech:     STT + TTS
-   • Brain:      an LLM with the template's prompt + your knowledge base
-   • Rules:      the scheduler that enforces business hours, reminders, retries
+Browser (dashboard)
+      │  fetch()
+      ▼
+API routes  /api/agents · /api/agents/[id]/call · /api/stats · /api/analytics · /api/intent · /api/config
+      │
+      ▼
+Database (SQLite file: data/voiceagent.db)   ← agents + every call, persists across restarts
+      │
+      ├── Call engine  → real intent detection → records a call row
+      │         │
+      │         ├─ Live:  places the call through Vapi (if VAPI_API_KEY set)
+      │         └─ Demo:  simulates the call (still a real DB record)
+      │
+      └── Stats & analytics are COMPUTED from the call rows — nothing is hardcoded
 ```
 
-Everything the UI does is also exposed as an API, so agents drop into any app.
-
-### Where the real work plugs in
-
-This repo ships a **working product shell** with a mock backend so the flow is
-fully demoable. To make calls actually happen, wire the store’s create/dispatch
-path to a provider:
-
-- **Telephony + realtime voice:** Twilio Programmable Voice, or a voice
-  orchestrator like **Vapi** / **Bolna**.
-- **LLM brain:** feed the template’s `greeting` + `objective` + `knowledgeBase`
-  as the system prompt; return structured outputs for `collects[]` and intent.
-- **Scheduler:** a job queue (e.g. cron / BullMQ / Temporal) that honors
-  `CampaignRules` — business hours, timezone, `reminderHoursBefore`,
-  `feedbackHoursAfter`, `maxRetries`, `rescheduleMinutes`.
+- **Nothing on the dashboard is static.** “Calls today”, conversion rate, avg
+  cost, the 7‑day charts, and per‑agent metrics are all `SELECT`‑ed from the
+  `calls` table. Place calls and the numbers move.
+- **It persists.** Everything is stored in `data/voiceagent.db`. Restart the
+  app and your agents and history are still there.
+- **Where real voice plugs in:** set `VAPI_API_KEY` and the call engine
+  (`src/lib/callEngine.ts` → `src/lib/voice.ts`) dials real phones instead of
+  simulating.
 
 ---
 
@@ -163,48 +146,55 @@ path to a provider:
 ```
 src/
 ├─ app/
-│  ├─ layout.tsx                # root layout + global styles
-│  ├─ page.tsx                  # redirects to /app/overview
-│  ├─ app/                      # dashboard (route prefix /app/*)
-│  │  ├─ layout.tsx             # shell + TopNav
-│  │  ├─ overview/page.tsx
-│  │  ├─ create/page.tsx        # no‑code wizard
-│  │  ├─ agents/page.tsx
-│  │  ├─ analytics/page.tsx
-│  │  ├─ sdk/page.tsx
-│  │  └─ settings/page.tsx
-│  └─ api/
-│     ├─ agents/route.ts        # GET list / POST create
-│     └─ stats/route.ts         # GET platform stats
-├─ components/                  # TopNav, StatCard, LiveMonitor, wizard, charts…
+│  ├─ app/                      # dashboard pages (/app/*)
+│  │  ├─ overview  create  agents  analytics  sdk  settings
+│  └─ api/                      # backend
+│     ├─ agents/route.ts              GET list · POST create
+│     ├─ agents/[id]/route.ts         GET · PATCH status · DELETE
+│     ├─ agents/[id]/call/route.ts    POST place/simulate call(s)
+│     ├─ calls  stats  analytics  intent  config
+├─ components/                  # TopNav, wizard, charts, AgentsExplorer, ConnectionStatus…
 └─ lib/
-   ├─ types.ts                  # domain types (Agent, CampaignRules, …)
-   ├─ templates.ts              # 8 outbound + 4 inbound pre‑configured agents
-   ├─ integrations.ts           # CRM/ERP/calendar/telephony catalog
-   ├─ intent.ts                 # intelligent‑rescheduling parser
-   └─ store.ts                  # in‑memory data + stats
+   ├─ store.ts                  # SQLite database + all queries (the engine room)
+   ├─ callEngine.ts             # runs a call (real or simulated) and records it
+   ├─ llm.ts                    # Claude intent detection (+ heuristic fallback)
+   ├─ voice.ts                  # Vapi phone‑call adapter
+   ├─ config.ts                 # reads .env, exposes feature flags
+   ├─ intent.ts  templates.ts  integrations.ts  types.ts
 ```
 
-## 🔌 API reference (mock backend)
+## 🔌 API reference
 
 | Method | Endpoint | Purpose |
 | --- | --- | --- |
-| `GET` | `/api/stats` | Platform KPIs for the Overview cards |
-| `GET` | `/api/agents` | List all agents |
-| `POST` | `/api/agents` | Create & “deploy” an agent (body: name, direction, templateId, voice, language, phoneNumber, greeting, objective, knowledgeBase, rules, integrations) |
+| `GET` | `/api/config` | Live feature flags (demo vs live, which keys are set) |
+| `GET` | `/api/stats` | Dashboard KPIs, computed from call rows |
+| `GET` | `/api/analytics` | 7‑day series + per‑agent metrics |
+| `GET` `POST` | `/api/agents` | List / create agents |
+| `GET` `PATCH` `DELETE` | `/api/agents/[id]` | Inspect / pause‑activate / delete |
+| `POST` | `/api/agents/[id]/call` | Place or simulate call(s): `{ toNumber?, utterance?, count? }` |
+| `GET` | `/api/calls?agentId=` | Recent call records |
+| `POST` | `/api/intent` | Detect caller intent: `{ utterance, agentId? }` |
 
-```bash
-curl -X POST http://localhost:3000/api/agents \
-  -H "Content-Type: application/json" \
-  -d '{"name":"Win-back Q3","direction":"outbound","templateId":"winback-renewal","integrations":["salesforce","twilio"]}'
-```
+---
+
+## ☁️ Deployment notes (for later)
+
+- The database is a **local file**, so it needs a host with a **persistent
+  disk** — e.g. **Railway, Render, Fly.io, or a VPS**. Run `npm run build` then
+  `npm run start`.
+- On **serverless hosts like Vercel** the filesystem is temporary, so the
+  SQLite file won’t persist between requests. For those, point the data layer
+  at a hosted database (e.g. Postgres via Neon/Supabase) — only `src/lib/store.ts`
+  needs to change; the rest of the app already talks to it through functions.
+- Set the same keys from `.env` as environment variables in your host’s
+  dashboard.
 
 ---
 
 ## 📝 Notes
 
-- The in‑memory store resets on server restart — that’s intentional for a demo.
-  Replace it with a database to persist agents.
+- Requires Node 18+ (developed on Node 22).
 - `next/image` isn’t used, so image‑optimization dependencies aren’t on the
   runtime path.
 - This is an independent implementation inspired by the referenced concept; no

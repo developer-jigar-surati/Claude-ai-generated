@@ -1,6 +1,6 @@
 import Link from "next/link";
 import AgentsExplorer from "@/components/AgentsExplorer";
-import { listAgents } from "@/lib/store";
+import { listAgentsWithMetrics } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 
@@ -10,7 +10,7 @@ export default async function AgentsPage({
   searchParams: Promise<{ focus?: string }>;
 }) {
   const { focus } = await searchParams;
-  const agents = listAgents();
+  const agents = listAgentsWithMetrics();
 
   return (
     <div className="space-y-5">

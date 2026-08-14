@@ -60,11 +60,42 @@ export interface Agent {
   knowledgeBase: string;
   rules: CampaignRules;
   integrations: string[]; // integration ids
+  createdAt: string;
+}
+
+export type CallOutcome =
+  | "converted"
+  | "rescheduled"
+  | "not_interested"
+  | "no_answer"
+  | "voicemail"
+  | "in_progress";
+
+export interface Call {
+  id: string;
+  agentId: string;
+  direction: Direction;
+  toNumber: string;
+  status: "queued" | "in_progress" | "completed";
+  outcome: CallOutcome;
+  intent: string;
+  collected: Record<string, string>;
+  durationSec: number;
+  cost: number;
+  provider: string;
+  transcript: string;
+  startedAt: string; // ISO
+  day: string; // YYYY-MM-DD (local)
+}
+
+/** Live per-agent metrics, computed from the calls table (never hardcoded). */
+export interface AgentMetrics {
   callsToday: number;
   conversionRate: number; // 0-100
   avgCostPerCall: number;
-  createdAt: string;
 }
+
+export type AgentWithMetrics = Agent & AgentMetrics;
 
 export interface PlatformStats {
   activeAgents: number;

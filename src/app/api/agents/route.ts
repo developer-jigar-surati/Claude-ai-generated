@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
-import { addAgent, listAgents } from "@/lib/store";
+import { addAgent, listAgentsWithMetrics } from "@/lib/store";
 import { defaultRulesFor, getTemplate } from "@/lib/templates";
 import { Agent, CampaignRules, Direction } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  return NextResponse.json({ agents: listAgents() });
+  return NextResponse.json({ agents: listAgentsWithMetrics() });
 }
 
 export async function POST(req: Request) {
@@ -21,9 +21,7 @@ export async function POST(req: Request) {
   const direction: Direction = body.direction === "inbound" ? "inbound" : "outbound";
   const rules: CampaignRules = { ...defaultRulesFor(templateId), ...(body.rules ?? {}) };
 
-  const id = `agt_${Math.abs(hashString(String(body.name) + templateId + listAgents().length))
-    .toString(36)
-    .slice(0, 8)}`;
+  const id = `agt_${Math.random().toString(36).slice(2, 10)}`;
 
   const agent: Agent = {
     id,
@@ -40,20 +38,9 @@ export async function POST(req: Request) {
     knowledgeBase: String(body.knowledgeBase || ""),
     rules,
     integrations: Array.isArray(body.integrations) ? body.integrations : [],
-    callsToday: 0,
-    conversionRate: 0,
-    avgCostPerCall: 0,
     createdAt: new Date().toISOString(),
   };
 
   addAgent(agent);
   return NextResponse.json({ agent }, { status: 201 });
-}
-
-function hashString(s: string): number {
-  let h = 0;
-  for (let i = 0; i < s.length; i++) {
-    h = (Math.imul(31, h) + s.charCodeAt(i)) | 0;
-  }
-  return h;
 }
