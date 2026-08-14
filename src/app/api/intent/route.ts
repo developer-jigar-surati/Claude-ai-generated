@@ -11,7 +11,7 @@ export async function POST(req: Request) {
   if (!utterance.trim()) {
     return NextResponse.json({ error: "utterance required" }, { status: 400 });
   }
-  const agent = body.agentId ? getAgent(String(body.agentId)) : undefined;
+  const agent = body.agentId ? await getAgent(String(body.agentId)) : undefined;
   const rescheduleMinutes = agent?.rules.rescheduleMinutes ?? 30;
   const result = await detectIntent(utterance, rescheduleMinutes);
   return NextResponse.json({ result });

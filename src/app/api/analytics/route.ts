@@ -4,9 +4,10 @@ import { analyticsSeries, computeStats, listAgentsWithMetrics } from "@/lib/stor
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  return NextResponse.json({
-    stats: computeStats(),
-    series: analyticsSeries(7),
-    agents: listAgentsWithMetrics(),
-  });
+  const [stats, series, agents] = await Promise.all([
+    computeStats(),
+    analyticsSeries(7),
+    listAgentsWithMetrics(),
+  ]);
+  return NextResponse.json({ stats, series, agents });
 }

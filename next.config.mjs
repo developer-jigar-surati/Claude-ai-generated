@@ -1,8 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  // better-sqlite3 is a native module — never bundle it, load it at runtime.
-  serverExternalPackages: ["better-sqlite3"],
+  // libSQL ships optional native bindings — never bundle them.
+  serverExternalPackages: ["@libsql/client", "libsql"],
 };
 
 export default nextConfig;

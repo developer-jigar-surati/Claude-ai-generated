@@ -4,5 +4,5 @@ import { computeStats } from "@/lib/store";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  return NextResponse.json({ stats: computeStats() });
+  return NextResponse.json({ stats: await computeStats() });
 }

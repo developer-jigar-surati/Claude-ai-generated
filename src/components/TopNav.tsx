@@ -84,6 +84,15 @@ export default function TopNav() {
             PS
           </span>
           <button
+            onClick={async () => {
+              await fetch("/api/auth/logout", { method: "POST" });
+              window.location.href = "/login";
+            }}
+            className="hidden rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-white/5 sm:inline-flex"
+          >
+            Sign out
+          </button>
+          <button
             onClick={() => setMenuOpen((o) => !o)}
             className="grid h-9 w-9 place-items-center rounded-lg text-slate-500 hover:bg-slate-100 dark:text-slate-300 lg:hidden"
             aria-label="Menu"

@@ -6,10 +6,11 @@ import ConnectionStatus from "@/components/ConnectionStatus";
 import { computeStats, listAgents } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
+// First page load seeds the database — allow extra time on serverless hosts.
+export const maxDuration = 60;
 
-export default function OverviewPage() {
-  const stats = computeStats();
-  const agents = listAgents();
+export default async function OverviewPage() {
+  const [stats, agents] = await Promise.all([computeStats(), listAgents()]);
 
   return (
     <div className="space-y-6">

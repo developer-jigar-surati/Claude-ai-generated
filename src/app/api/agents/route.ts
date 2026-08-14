@@ -6,7 +6,7 @@ import { Agent, CampaignRules, Direction } from "@/lib/types";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  return NextResponse.json({ agents: listAgentsWithMetrics() });
+  return NextResponse.json({ agents: await listAgentsWithMetrics() });
 }
 
 export async function POST(req: Request) {
@@ -41,6 +41,6 @@ export async function POST(req: Request) {
     createdAt: new Date().toISOString(),
   };
 
-  addAgent(agent);
+  await addAgent(agent);
   return NextResponse.json({ agent }, { status: 201 });
 }

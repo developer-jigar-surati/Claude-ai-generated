@@ -4,10 +4,12 @@ import { analyticsSeries, computeStats, listAgentsWithMetrics } from "@/lib/stor
 
 export const dynamic = "force-dynamic";
 
-export default function AnalyticsPage() {
-  const stats = computeStats();
-  const agents = listAgentsWithMetrics();
-  const series = analyticsSeries(7);
+export default async function AnalyticsPage() {
+  const [stats, agents, series] = await Promise.all([
+    computeStats(),
+    listAgentsWithMetrics(),
+    analyticsSeries(7),
+  ]);
 
   const callSeries = series.map((s) => ({ label: s.label, value: s.calls }));
   const convSeries = series.map((s) => ({ label: s.label, value: s.conversions }));

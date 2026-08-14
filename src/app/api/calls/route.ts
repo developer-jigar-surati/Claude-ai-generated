@@ -7,5 +7,5 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   const agentId = url.searchParams.get("agentId") || undefined;
   const limit = Math.min(parseInt(url.searchParams.get("limit") || "25", 10) || 25, 100);
-  return NextResponse.json({ calls: listCalls(agentId, limit) });
+  return NextResponse.json({ calls: await listCalls(agentId, limit) });
 }

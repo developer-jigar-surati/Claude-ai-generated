@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import Database from "better-sqlite3";
+import { createClient, type Client, type InArgs } from "@libsql/client";
 import {
   Agent,
   AgentMetrics,
@@ -17,81 +17,98 @@ import { INTEGRATIONS } from "./integrations";
 export { INTEGRATIONS };
 
 /**
- * Real, file-backed database (SQLite via better-sqlite3). Data persists to
- * `data/voiceagent.db` and survives restarts — nothing on the dashboard is
- * hardcoded; every number is computed from the rows below.
+ * Database layer — libSQL (a SQLite fork).
  *
- * In production you can point this at Postgres instead (see README) — the
- * repository functions are the only thing the rest of the app calls.
+ *  • Local development: a plain file at `data/voiceagent.db` (no setup).
+ *  • Production / free hosting: point DATABASE_URL at a free Turso database
+ *    (libsql://... + DATABASE_AUTH_TOKEN). Same SQL, same tables.
+ *
+ * Everything the dashboard shows is computed from the `calls` table — nothing
+ * is hardcoded.
  */
 
-const DATA_DIR = path.join(process.cwd(), "data");
-const DB_PATH = process.env.DATABASE_FILE || path.join(DATA_DIR, "voiceagent.db");
+const DB_URL = process.env.DATABASE_URL?.trim() || "file:data/voiceagent.db";
+const DB_AUTH = process.env.DATABASE_AUTH_TOKEN?.trim() || undefined;
 
 // eslint-disable-next-line no-var
 declare global {
-  var __VA_DB__: Database.Database | undefined;
+  var __VA_CLIENT__: Client | undefined;
+  var __VA_READY__: Promise<void> | undefined;
 }
 
-function openDb(): Database.Database {
-  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-  const db = new Database(DB_PATH);
-  db.pragma("journal_mode = WAL");
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS agents (
-      id TEXT PRIMARY KEY,
-      name TEXT NOT NULL,
-      direction TEXT NOT NULL,
-      template_id TEXT NOT NULL,
-      template_name TEXT NOT NULL,
-      status TEXT NOT NULL,
-      voice TEXT NOT NULL,
-      language TEXT NOT NULL,
-      phone_number TEXT NOT NULL,
-      greeting TEXT NOT NULL,
-      objective TEXT NOT NULL,
-      knowledge_base TEXT NOT NULL,
-      rules_json TEXT NOT NULL,
-      integrations_json TEXT NOT NULL,
-      created_at TEXT NOT NULL
-    );
-    CREATE TABLE IF NOT EXISTS calls (
-      id TEXT PRIMARY KEY,
-      agent_id TEXT NOT NULL,
-      direction TEXT NOT NULL,
-      to_number TEXT NOT NULL,
-      status TEXT NOT NULL,
-      outcome TEXT NOT NULL,
-      intent TEXT NOT NULL,
-      collected_json TEXT NOT NULL,
-      duration_sec INTEGER NOT NULL,
-      cost REAL NOT NULL,
-      provider TEXT NOT NULL,
-      transcript TEXT NOT NULL,
-      started_at TEXT NOT NULL,
-      day TEXT NOT NULL
-    );
-    CREATE INDEX IF NOT EXISTS idx_calls_agent ON calls(agent_id);
-    CREATE INDEX IF NOT EXISTS idx_calls_day ON calls(day);
-  `);
-  return db;
+function makeClient(): Client {
+  // Ensure the local folder exists for file: URLs.
+  if (DB_URL.startsWith("file:")) {
+    const filePath = DB_URL.slice("file:".length);
+    const dir = path.dirname(path.resolve(filePath));
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  }
+  return createClient({ url: DB_URL, authToken: DB_AUTH });
 }
 
-const db: Database.Database = globalThis.__VA_DB__ ?? openDb();
-globalThis.__VA_DB__ = db;
+const db: Client = globalThis.__VA_CLIENT__ ?? makeClient();
+globalThis.__VA_CLIENT__ = db;
+
+// ---------- schema + seed (run once) ----------
+
+async function migrate(): Promise<void> {
+  await db.batch(
+    [
+      `CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)`,
+      `CREATE TABLE IF NOT EXISTS agents (
+        id TEXT PRIMARY KEY, name TEXT NOT NULL, direction TEXT NOT NULL,
+        template_id TEXT NOT NULL, template_name TEXT NOT NULL, status TEXT NOT NULL,
+        voice TEXT NOT NULL, language TEXT NOT NULL, phone_number TEXT NOT NULL,
+        greeting TEXT NOT NULL, objective TEXT NOT NULL, knowledge_base TEXT NOT NULL,
+        rules_json TEXT NOT NULL, integrations_json TEXT NOT NULL, created_at TEXT NOT NULL
+      )`,
+      `CREATE TABLE IF NOT EXISTS calls (
+        id TEXT PRIMARY KEY, agent_id TEXT NOT NULL, direction TEXT NOT NULL,
+        to_number TEXT NOT NULL, status TEXT NOT NULL, outcome TEXT NOT NULL,
+        intent TEXT NOT NULL, collected_json TEXT NOT NULL, duration_sec INTEGER NOT NULL,
+        cost REAL NOT NULL, provider TEXT NOT NULL, transcript TEXT NOT NULL,
+        started_at TEXT NOT NULL, day TEXT NOT NULL
+      )`,
+      `CREATE INDEX IF NOT EXISTS idx_calls_agent ON calls(agent_id)`,
+      `CREATE INDEX IF NOT EXISTS idx_calls_day ON calls(day)`,
+    ],
+    "write"
+  );
+}
+
+/** Idempotent, concurrency-safe: only the instance that wins the `meta` lock seeds. */
+export async function ensureReady(): Promise<void> {
+  if (!globalThis.__VA_READY__) {
+    globalThis.__VA_READY__ = (async () => {
+      await migrate();
+      try {
+        // Whoever inserts this row first owns seeding; others hit the PK and skip.
+        await db.execute({
+          sql: "INSERT INTO meta (key, value) VALUES ('seeded', ?)",
+          args: [new Date().toISOString()],
+        });
+      } catch {
+        return; // already seeded by someone else
+      }
+      await seed();
+    })();
+  }
+  return globalThis.__VA_READY__;
+}
 
 // ---------- helpers ----------
 
 function localDay(d: Date): string {
-  // YYYY-MM-DD in the server's local timezone.
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
 }
-
 function today(): string {
   return localDay(new Date());
+}
+function num(v: unknown): number {
+  return typeof v === "bigint" ? Number(v) : ((v as number) ?? 0);
 }
 
 function rowToAgent(r: Record<string, unknown>): Agent {
@@ -113,7 +130,6 @@ function rowToAgent(r: Record<string, unknown>): Agent {
     createdAt: r.created_at as string,
   };
 }
-
 function rowToCall(r: Record<string, unknown>): Call {
   return {
     id: r.id as string,
@@ -124,8 +140,8 @@ function rowToCall(r: Record<string, unknown>): Call {
     outcome: r.outcome as CallOutcome,
     intent: r.intent as string,
     collected: JSON.parse(r.collected_json as string),
-    durationSec: r.duration_sec as number,
-    cost: r.cost as number,
+    durationSec: num(r.duration_sec),
+    cost: num(r.cost),
     provider: r.provider as string,
     transcript: r.transcript as string,
     startedAt: r.started_at as string,
@@ -135,145 +151,155 @@ function rowToCall(r: Record<string, unknown>): Call {
 
 // ---------- agents repository ----------
 
-const insertAgentStmt = db.prepare(`
-  INSERT INTO agents (id,name,direction,template_id,template_name,status,voice,language,
-    phone_number,greeting,objective,knowledge_base,rules_json,integrations_json,created_at)
-  VALUES (@id,@name,@direction,@template_id,@template_name,@status,@voice,@language,
-    @phone_number,@greeting,@objective,@knowledge_base,@rules_json,@integrations_json,@created_at)
-`);
+const AGENT_COLS =
+  "id,name,direction,template_id,template_name,status,voice,language,phone_number,greeting,objective,knowledge_base,rules_json,integrations_json,created_at";
 
-function agentToRow(a: Agent) {
-  return {
-    id: a.id,
-    name: a.name,
-    direction: a.direction,
-    template_id: a.templateId,
-    template_name: a.templateName,
-    status: a.status,
-    voice: a.voice,
-    language: a.language,
-    phone_number: a.phoneNumber,
-    greeting: a.greeting,
-    objective: a.objective,
-    knowledge_base: a.knowledgeBase,
-    rules_json: JSON.stringify(a.rules),
-    integrations_json: JSON.stringify(a.integrations),
-    created_at: a.createdAt,
-  };
+function agentArgs(a: Agent): InArgs {
+  return [
+    a.id,
+    a.name,
+    a.direction,
+    a.templateId,
+    a.templateName,
+    a.status,
+    a.voice,
+    a.language,
+    a.phoneNumber,
+    a.greeting,
+    a.objective,
+    a.knowledgeBase,
+    JSON.stringify(a.rules),
+    JSON.stringify(a.integrations),
+    a.createdAt,
+  ];
 }
 
-export function listAgents(): Agent[] {
-  return db
-    .prepare("SELECT * FROM agents ORDER BY created_at DESC")
-    .all()
-    .map((r) => rowToAgent(r as Record<string, unknown>));
+export async function listAgents(): Promise<Agent[]> {
+  await ensureReady();
+  const rs = await db.execute("SELECT * FROM agents ORDER BY created_at DESC");
+  return rs.rows.map((r) => rowToAgent(r as Record<string, unknown>));
 }
 
-export function getAgent(id: string): Agent | undefined {
-  const r = db.prepare("SELECT * FROM agents WHERE id = ?").get(id) as
-    | Record<string, unknown>
-    | undefined;
-  return r ? rowToAgent(r) : undefined;
+export async function getAgent(id: string): Promise<Agent | undefined> {
+  await ensureReady();
+  const rs = await db.execute({ sql: "SELECT * FROM agents WHERE id = ?", args: [id] });
+  return rs.rows[0] ? rowToAgent(rs.rows[0] as Record<string, unknown>) : undefined;
 }
 
-export function addAgent(agent: Agent): Agent {
-  insertAgentStmt.run(agentToRow(agent));
+export async function addAgent(agent: Agent): Promise<Agent> {
+  await ensureReady();
+  await db.execute({
+    sql: `INSERT INTO agents (${AGENT_COLS}) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+    args: agentArgs(agent),
+  });
   return agent;
 }
 
-export function updateAgentStatus(id: string, status: Agent["status"]): Agent | undefined {
-  db.prepare("UPDATE agents SET status = ? WHERE id = ?").run(status, id);
+export async function updateAgentStatus(
+  id: string,
+  status: Agent["status"]
+): Promise<Agent | undefined> {
+  await ensureReady();
+  await db.execute({ sql: "UPDATE agents SET status = ? WHERE id = ?", args: [status, id] });
   return getAgent(id);
 }
 
-export function deleteAgent(id: string): boolean {
-  const info = db.prepare("DELETE FROM agents WHERE id = ?").run(id);
-  db.prepare("DELETE FROM calls WHERE agent_id = ?").run(id);
-  return info.changes > 0;
+export async function deleteAgent(id: string): Promise<boolean> {
+  await ensureReady();
+  const rs = await db.execute({ sql: "DELETE FROM agents WHERE id = ?", args: [id] });
+  await db.execute({ sql: "DELETE FROM calls WHERE agent_id = ?", args: [id] });
+  return num(rs.rowsAffected) > 0;
 }
 
 // ---------- calls repository ----------
 
-const insertCallStmt = db.prepare(`
-  INSERT INTO calls (id,agent_id,direction,to_number,status,outcome,intent,collected_json,
-    duration_sec,cost,provider,transcript,started_at,day)
-  VALUES (@id,@agent_id,@direction,@to_number,@status,@outcome,@intent,@collected_json,
-    @duration_sec,@cost,@provider,@transcript,@started_at,@day)
-`);
+const CALL_COLS =
+  "id,agent_id,direction,to_number,status,outcome,intent,collected_json,duration_sec,cost,provider,transcript,started_at,day";
 
-export function insertCall(call: Call): Call {
-  insertCallStmt.run({
-    id: call.id,
-    agent_id: call.agentId,
-    direction: call.direction,
-    to_number: call.toNumber,
-    status: call.status,
-    outcome: call.outcome,
-    intent: call.intent,
-    collected_json: JSON.stringify(call.collected),
-    duration_sec: call.durationSec,
-    cost: call.cost,
-    provider: call.provider,
-    transcript: call.transcript,
-    started_at: call.startedAt,
-    day: call.day,
+function callArgs(c: Call): InArgs {
+  return [
+    c.id,
+    c.agentId,
+    c.direction,
+    c.toNumber,
+    c.status,
+    c.outcome,
+    c.intent,
+    JSON.stringify(c.collected),
+    c.durationSec,
+    c.cost,
+    c.provider,
+    c.transcript,
+    c.startedAt,
+    c.day,
+  ];
+}
+
+export async function insertCall(call: Call): Promise<Call> {
+  await ensureReady();
+  await db.execute({
+    sql: `INSERT INTO calls (${CALL_COLS}) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+    args: callArgs(call),
   });
   return call;
 }
 
-export function listCalls(agentId?: string, limit = 25): Call[] {
-  const rows = agentId
-    ? db
-        .prepare("SELECT * FROM calls WHERE agent_id = ? ORDER BY started_at DESC LIMIT ?")
-        .all(agentId, limit)
-    : db.prepare("SELECT * FROM calls ORDER BY started_at DESC LIMIT ?").all(limit);
-  return rows.map((r) => rowToCall(r as Record<string, unknown>));
+export async function listCalls(agentId?: string, limit = 25): Promise<Call[]> {
+  await ensureReady();
+  const rs = agentId
+    ? await db.execute({
+        sql: "SELECT * FROM calls WHERE agent_id = ? ORDER BY started_at DESC LIMIT ?",
+        args: [agentId, limit],
+      })
+    : await db.execute({
+        sql: "SELECT * FROM calls ORDER BY started_at DESC LIMIT ?",
+        args: [limit],
+      });
+  return rs.rows.map((r) => rowToCall(r as Record<string, unknown>));
 }
 
 export function makeDay(iso: string): string {
   return localDay(new Date(iso));
 }
 
-// ---------- metrics & stats (all computed from rows) ----------
+// ---------- metrics & stats (computed from rows) ----------
 
-export function agentMetrics(agentId: string): AgentMetrics {
+export async function agentMetrics(agentId: string): Promise<AgentMetrics> {
+  await ensureReady();
   const d = today();
-  const row = db
-    .prepare(
-      `SELECT
-         COUNT(*) AS calls,
-         SUM(CASE WHEN outcome = 'converted' THEN 1 ELSE 0 END) AS conv,
-         AVG(cost) AS avgcost
-       FROM calls WHERE agent_id = ? AND day = ?`
-    )
-    .get(agentId, d) as { calls: number; conv: number | null; avgcost: number | null };
-  const calls = row.calls || 0;
+  const rs = await db.execute({
+    sql: `SELECT COUNT(*) AS calls,
+                 SUM(CASE WHEN outcome = 'converted' THEN 1 ELSE 0 END) AS conv,
+                 AVG(cost) AS avgcost
+          FROM calls WHERE agent_id = ? AND day = ?`,
+    args: [agentId, d],
+  });
+  const r = rs.rows[0] as Record<string, unknown>;
+  const calls = num(r.calls);
   return {
     callsToday: calls,
-    conversionRate: calls ? Math.round(((row.conv || 0) / calls) * 1000) / 10 : 0,
-    avgCostPerCall: row.avgcost ? Math.round(row.avgcost * 100) / 100 : 0,
+    conversionRate: calls ? Math.round((num(r.conv) / calls) * 1000) / 10 : 0,
+    avgCostPerCall: r.avgcost != null ? Math.round(num(r.avgcost) * 100) / 100 : 0,
   };
 }
 
-export function listAgentsWithMetrics(): AgentWithMetrics[] {
-  return listAgents().map((a) => ({ ...a, ...agentMetrics(a.id) }));
+export async function listAgentsWithMetrics(): Promise<AgentWithMetrics[]> {
+  const agents = await listAgents();
+  return Promise.all(
+    agents.map(async (a) => ({ ...a, ...(await agentMetrics(a.id)) }))
+  );
 }
 
-function dayStats(day: string) {
-  const row = db
-    .prepare(
-      `SELECT
-         COUNT(*) AS calls,
-         SUM(CASE WHEN outcome = 'converted' THEN 1 ELSE 0 END) AS conv,
-         AVG(cost) AS avgcost
-       FROM calls WHERE day = ?`
-    )
-    .get(day) as { calls: number; conv: number | null; avgcost: number | null };
-  return {
-    calls: row.calls || 0,
-    conv: row.conv || 0,
-    avgcost: row.avgcost || 0,
-  };
+async function dayStats(day: string) {
+  const rs = await db.execute({
+    sql: `SELECT COUNT(*) AS calls,
+                 SUM(CASE WHEN outcome = 'converted' THEN 1 ELSE 0 END) AS conv,
+                 AVG(cost) AS avgcost
+          FROM calls WHERE day = ?`,
+    args: [day],
+  });
+  const r = rs.rows[0] as Record<string, unknown>;
+  return { calls: num(r.calls), conv: num(r.conv), avgcost: num(r.avgcost) };
 }
 
 function pctChange(now: number, prev: number): number {
@@ -281,49 +307,49 @@ function pctChange(now: number, prev: number): number {
   return Math.round(((now - prev) / prev) * 1000) / 10;
 }
 
-export function computeStats(): PlatformStats {
+export async function computeStats(): Promise<PlatformStats> {
+  await ensureReady();
   const now = new Date();
   const d0 = localDay(now);
-  const yesterday = new Date(now.getTime() - 86400000);
-  const d1 = localDay(yesterday);
+  const d1 = localDay(new Date(now.getTime() - 86400000));
   const weekAgo = new Date(now.getTime() - 7 * 86400000);
 
-  const t = dayStats(d0);
-  const y = dayStats(d1);
+  const t = await dayStats(d0);
+  const y = await dayStats(d1);
 
-  const activeAgents = (
-    db.prepare("SELECT COUNT(*) AS c FROM agents WHERE status = 'active'").get() as {
-      c: number;
-    }
-  ).c;
-  const newAgentsThisWeek = (
-    db.prepare("SELECT COUNT(*) AS c FROM agents WHERE created_at >= ?").get(
-      weekAgo.toISOString()
-    ) as { c: number }
-  ).c;
-  const liveCallsNow = (
-    db.prepare("SELECT COUNT(*) AS c FROM calls WHERE status = 'in_progress'").get() as {
-      c: number;
-    }
-  ).c;
+  const active = num(
+    (
+      await db.execute("SELECT COUNT(*) AS c FROM agents WHERE status = 'active'")
+    ).rows[0]?.c
+  );
+  const newThisWeek = num(
+    (
+      await db.execute({
+        sql: "SELECT COUNT(*) AS c FROM agents WHERE created_at >= ?",
+        args: [weekAgo.toISOString()],
+      })
+    ).rows[0]?.c
+  );
+  const liveCalls = num(
+    (
+      await db.execute("SELECT COUNT(*) AS c FROM calls WHERE status = 'in_progress'")
+    ).rows[0]?.c
+  );
 
   const convRate = t.calls ? Math.round((t.conv / t.calls) * 1000) / 10 : 0;
   const yConvRate = y.calls ? (y.conv / y.calls) * 100 : 0;
 
   return {
-    activeAgents,
-    activeAgentsDeltaWeek: newAgentsThisWeek,
+    activeAgents: active,
+    activeAgentsDeltaWeek: newThisWeek,
     callsToday: t.calls,
     callsDeltaPct: pctChange(t.calls, y.calls),
     conversionRate: convRate,
     conversionDeltaPct: Math.round((convRate - yConvRate) * 10) / 10,
     avgCostPerCall: Math.round(t.avgcost * 100) / 100,
-    costDeltaPct: pctChange(
-      Math.round(t.avgcost * 100),
-      Math.round(y.avgcost * 100)
-    ),
-    liveCallsNow,
-    agentsLive: activeAgents,
+    costDeltaPct: pctChange(Math.round(t.avgcost * 100), Math.round(y.avgcost * 100)),
+    liveCallsNow: liveCalls,
+    agentsLive: active,
     conversionsToday: t.conv,
   };
 }
@@ -335,20 +361,21 @@ export interface DaySeries {
   conversions: number;
 }
 
-export function analyticsSeries(days = 7): DaySeries[] {
+export async function analyticsSeries(days = 7): Promise<DaySeries[]> {
+  await ensureReady();
   const out: DaySeries[] = [];
   const now = new Date();
   const WEEKDAY = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   for (let i = days - 1; i >= 0; i--) {
     const d = new Date(now.getTime() - i * 86400000);
     const day = localDay(d);
-    const s = dayStats(day);
+    const s = await dayStats(day);
     out.push({ label: WEEKDAY[d.getDay()], day, calls: s.calls, conversions: s.conv });
   }
   return out;
 }
 
-// ---------- seeding (creates REAL rows on first boot) ----------
+// ---------- seeding (creates real rows on first boot) ----------
 
 function randomOutcome(convProbability: number): CallOutcome {
   const r = Math.random();
@@ -357,17 +384,17 @@ function randomOutcome(convProbability: number): CallOutcome {
   return rest[Math.floor(Math.random() * rest.length)];
 }
 
-function seedCallsForAgent(
+// Kept modest so first-boot seeding is fast even over a network database.
+function buildCalls(
   agentId: string,
   direction: Direction,
   todayCount: number,
   convProbability: number,
   baseCost: number
-) {
+): Call[] {
   const now = new Date();
+  const shape = [1, 0.85, 0.95, 0.63, 0.9, 0.85, 0.72]; // today .. 6 days ago
   const rows: Call[] = [];
-  // 7 days of history, today at full volume, earlier days scaled down.
-  const shape = [1, 0.85, 0.95, 0.63, 0.9, 0.85, 0.72]; // today..6 days ago
   for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
     const count = Math.round(todayCount * shape[dayOffset]);
     const dayDate = new Date(now.getTime() - dayOffset * 86400000);
@@ -377,7 +404,10 @@ function seedCallsForAgent(
         dayDate.getTime() - Math.floor(Math.random() * 8 * 3600000)
       ).toISOString();
       const outcome = randomOutcome(convProbability);
-      const cost = Math.round((baseCost + (Math.random() - 0.5) * 0.1) * 100) / 100;
+      const cost = Math.max(
+        0.05,
+        Math.round((baseCost + (Math.random() - 0.5) * 0.1) * 100) / 100
+      );
       rows.push({
         id: `call_${agentId}_${day}_${i}`,
         agentId,
@@ -388,7 +418,7 @@ function seedCallsForAgent(
         intent: outcome === "converted" ? "confirm" : outcome,
         collected: {},
         durationSec: 60 + Math.floor(Math.random() * 240),
-        cost: Math.max(0.05, cost),
+        cost,
         provider: "simulator",
         transcript: "",
         startedAt,
@@ -396,15 +426,10 @@ function seedCallsForAgent(
       });
     }
   }
-  const insertMany = db.transaction((calls: Call[]) => {
-    for (const c of calls) insertCall(c);
-  });
-  insertMany(rows);
-
-  // A handful of live (in-progress) calls today for the Live Monitor.
-  const liveMany = db.transaction((n: number) => {
-    for (let i = 0; i < n; i++) {
-      insertCall({
+  // A few live calls today for the Live Monitor.
+  if (direction === "outbound") {
+    for (let i = 0; i < 9; i++) {
+      rows.push({
         id: `call_${agentId}_live_${i}`,
         agentId,
         direction,
@@ -421,11 +446,25 @@ function seedCallsForAgent(
         day: localDay(now),
       });
     }
-  });
-  liveMany(direction === "outbound" ? 9 : 0);
+  }
+  return rows;
 }
 
-function seed() {
+async function insertCallsChunked(rows: Call[]) {
+  const CHUNK = 200;
+  for (let i = 0; i < rows.length; i += CHUNK) {
+    const slice = rows.slice(i, i + CHUNK);
+    await db.batch(
+      slice.map((c) => ({
+        sql: `INSERT INTO calls (${CALL_COLS}) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+        args: callArgs(c),
+      })),
+      "write"
+    );
+  }
+}
+
+async function seed() {
   const seedAgents: Agent[] = [
     {
       id: "agt_appt_reminders",
@@ -462,21 +501,14 @@ function seed() {
       createdAt: new Date(Date.now() - 9 * 86400000).toISOString(),
     },
   ];
-  const insertAgents = db.transaction((agents: Agent[]) => {
-    for (const a of agents) addAgent(a);
-  });
-  insertAgents(seedAgents);
+  await db.batch(
+    seedAgents.map((a) => ({
+      sql: `INSERT INTO agents (${AGENT_COLS}) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+      args: agentArgs(a),
+    })),
+    "write"
+  );
 
-  // Tuned so today's dashboard reads ~1,284 calls / 24.6% / ~$0.38 like the
-  // reference — but every one of these is a real, queryable row.
-  seedCallsForAgent("agt_appt_reminders", "outbound", 1116, 0.246, 0.36);
-  seedCallsForAgent("agt_recruit_screen", "outbound", 168, 0.246, 0.5);
-}
-
-// First-boot seed.
-const agentCount = (
-  db.prepare("SELECT COUNT(*) AS c FROM agents").get() as { c: number }
-).c;
-if (agentCount === 0) {
-  seed();
+  await insertCallsChunked(buildCalls("agt_appt_reminders", "outbound", 120, 0.246, 0.36));
+  await insertCallsChunked(buildCalls("agt_recruit_screen", "outbound", 48, 0.246, 0.5));
 }

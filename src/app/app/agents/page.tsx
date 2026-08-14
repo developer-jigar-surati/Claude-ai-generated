@@ -10,7 +10,7 @@ export default async function AgentsPage({
   searchParams: Promise<{ focus?: string }>;
 }) {
   const { focus } = await searchParams;
-  const agents = listAgentsWithMetrics();
+  const agents = await listAgentsWithMetrics();
 
   return (
     <div className="space-y-5">

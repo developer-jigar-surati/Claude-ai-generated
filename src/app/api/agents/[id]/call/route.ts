@@ -3,6 +3,8 @@ import { getAgent } from "@/lib/store";
 import { runCall } from "@/lib/callEngine";
 
 export const dynamic = "force-dynamic";
+// A 10-call campaign with live Claude can take a while — give it headroom.
+export const maxDuration = 60;
 
 /**
  * Place (or simulate) one or more calls with this agent.
@@ -13,7 +15,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const agent = getAgent(id);
+  const agent = await getAgent(id);
   if (!agent) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const body = await req.json().catch(() => ({}));

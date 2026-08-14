@@ -9,9 +9,9 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const agent = getAgent(id);
+  const agent = await getAgent(id);
   if (!agent) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  return NextResponse.json({ agent: { ...agent, ...agentMetrics(id) } });
+  return NextResponse.json({ agent: { ...agent, ...(await agentMetrics(id)) } });
 }
 
 export async function PATCH(
@@ -24,9 +24,9 @@ export async function PATCH(
   if (!["active", "paused", "draft"].includes(status)) {
     return NextResponse.json({ error: "Invalid status" }, { status: 400 });
   }
-  const agent = updateAgentStatus(id, status);
+  const agent = await updateAgentStatus(id, status);
   if (!agent) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  return NextResponse.json({ agent: { ...agent, ...agentMetrics(id) } });
+  return NextResponse.json({ agent: { ...agent, ...(await agentMetrics(id)) } });
 }
 
 export async function DELETE(
@@ -34,7 +34,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const ok = deleteAgent(id);
+  const ok = await deleteAgent(id);
   if (!ok) return NextResponse.json({ error: "Not found" }, { status: 404 });
   return NextResponse.json({ ok: true });
 }
