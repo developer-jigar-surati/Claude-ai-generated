@@ -42,7 +42,7 @@ export default function AgentsExplorer({
   const selected = agents.find((a) => a.id === selectedId) ?? filtered[0];
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[minmax(0,340px)_1fr]">
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,340px)_1fr]">
       {/* List */}
       <div className="space-y-3">
         <div className="inline-flex rounded-xl border border-slate-200 p-1 dark:border-white/10">
@@ -314,7 +314,7 @@ function AgentDetail({
       {/* Rules & integrations */}
       <div className="card p-5">
         <h3 className="mb-3 text-sm font-bold text-slate-900 dark:text-white">Campaign rules</h3>
-        <div className="grid gap-2 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           <Rule
             ok={agent.rules.businessHoursOnly}
             label={

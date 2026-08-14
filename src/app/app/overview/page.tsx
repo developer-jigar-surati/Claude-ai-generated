@@ -29,7 +29,7 @@ export default async function OverviewPage() {
       <ConnectionStatus />
 
       {/* Hero + Live monitor */}
-      <section className="grid gap-4 lg:grid-cols-[1.7fr_1fr]">
+      <section className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)]">
         <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-700 via-brand-600 to-brand-800 p-6 text-white sm:p-8">
           <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-white/10 blur-2xl" />
           <span className="pill bg-white/15 text-white">
@@ -60,7 +60,7 @@ export default async function OverviewPage() {
       </section>
 
       {/* Stat cards */}
-      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           icon={<Bot className="h-5 w-5" />}
           tint="bg-brand-100 text-brand-700"
@@ -96,7 +96,7 @@ export default async function OverviewPage() {
       </section>
 
       {/* Recent agents + Quick actions */}
-      <section className="grid gap-4 lg:grid-cols-[1.7fr_1fr]">
+      <section className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)]">
         <div className="card p-4">
           <div className="mb-1 flex items-center justify-between px-1">
             <h2 className="text-sm font-bold text-slate-900 dark:text-white">
@@ -126,7 +126,7 @@ export default async function OverviewPage() {
           <p className="mb-4 text-xs text-slate-500">
             Deploy new agents or access developer keys instantly
           </p>
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <QuickAction
               href="/app/create?direction=outbound"
               icon={<PhoneOutgoing className="h-5 w-5" />}

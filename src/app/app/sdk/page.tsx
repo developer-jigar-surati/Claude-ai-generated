@@ -73,26 +73,26 @@ export default function SdkPage() {
         </div>
       </section>
 
-      <section className="grid gap-4 lg:grid-cols-2">
-        <div>
+      <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <div className="min-w-0">
           <h2 className="mb-2 text-sm font-bold text-slate-900 dark:text-white">
             Place a call (cURL)
           </h2>
           <CodeBlock code={CURL} lang="bash" />
         </div>
-        <div>
+        <div className="min-w-0">
           <h2 className="mb-2 text-sm font-bold text-slate-900 dark:text-white">
             Node SDK
           </h2>
           <CodeBlock code={NODE} lang="typescript" />
         </div>
-        <div>
+        <div className="min-w-0">
           <h2 className="mb-2 text-sm font-bold text-slate-900 dark:text-white">
             Launch a rule-based campaign
           </h2>
           <CodeBlock code={CAMPAIGN} lang="typescript" />
         </div>
-        <div>
+        <div className="min-w-0">
           <h2 className="mb-2 text-sm font-bold text-slate-900 dark:text-white">
             Handle results (webhook)
           </h2>

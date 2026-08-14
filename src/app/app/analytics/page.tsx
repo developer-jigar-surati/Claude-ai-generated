@@ -26,14 +26,14 @@ export default async function AnalyticsPage() {
         </p>
       </div>
 
-      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard icon={<Phone className="h-5 w-5" />} tint="bg-rose-100 text-rose-600" value={stats.callsToday.toLocaleString()} label="Calls today" delta={`${stats.callsDeltaPct >= 0 ? "+" : ""}${stats.callsDeltaPct}%`} deltaPositive={stats.callsDeltaPct >= 0} />
         <StatCard icon={<Target className="h-5 w-5" />} tint="bg-emerald-100 text-emerald-600" value={`${stats.conversionRate}%`} label="Conversion rate" delta={`${stats.conversionDeltaPct >= 0 ? "+" : ""}${stats.conversionDeltaPct}%`} deltaPositive={stats.conversionDeltaPct >= 0} />
         <StatCard icon={<CheckCircle2 className="h-5 w-5" />} tint="bg-brand-100 text-brand-700" value={stats.conversionsToday.toLocaleString()} label="Conversions today" />
         <StatCard icon={<DollarSign className="h-5 w-5" />} tint="bg-amber-100 text-amber-600" value={`$${stats.avgCostPerCall.toFixed(2)}`} label="Avg. cost / call" delta={`${stats.costDeltaPct}%`} deltaPositive={stats.costDeltaPct <= 0} />
       </section>
 
-      <section className="grid gap-4 lg:grid-cols-2">
+      <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <div className="card p-5">
           <h2 className="mb-3 text-sm font-bold text-slate-900 dark:text-white">
             Calls — last 7 days

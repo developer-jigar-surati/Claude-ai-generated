@@ -21,7 +21,7 @@ export default function SettingsPage() {
           These reflect your <code>.env</code> file. Empty keys just mean that feature runs in
           simulation — the app still works.
         </p>
-        <div className="grid gap-2 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           <StatusRow label="Database" ok={f.database} detail="SQLite / Turso" />
           <StatusRow label="AI brain (Claude)" ok={f.llm} detail={f.llm ? f.model : "built-in parser"} />
           <StatusRow label="In-browser voice" ok detail="Ready — talk to any agent" />
@@ -31,7 +31,7 @@ export default function SettingsPage() {
 
       <section className="card p-5">
         <h2 className="mb-3 text-sm font-bold text-slate-900 dark:text-white">Workspace</h2>
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <label className="label">Workspace name</label>
             <input className="input" defaultValue={f.workspaceName} />
@@ -58,7 +58,7 @@ export default function SettingsPage() {
         <p className="mb-3 text-xs text-slate-500">
           CRM, ERP, calendars, and telephony that your agents can read from and write to.
         </p>
-        <div className="grid gap-2 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           {INTEGRATIONS.map((it) => (
             <div
               key={it.id}

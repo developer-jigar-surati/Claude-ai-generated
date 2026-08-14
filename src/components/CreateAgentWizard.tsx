@@ -171,7 +171,7 @@ export default function CreateAgentWizard() {
               ))}
             </div>
           </div>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {templates.map((t) => (
               <TemplateCard
                 key={t.id}
@@ -186,14 +186,14 @@ export default function CreateAgentWizard() {
 
       {/* Step 1: configure identity */}
       {step === 1 && template && (
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <div className="card space-y-4 p-5">
             <h3 className="text-sm font-bold text-slate-900 dark:text-white">Agent identity</h3>
             <div>
               <label className="label">Agent name</label>
               <input className="input" value={name} onChange={(e) => setName(e.target.value)} />
             </div>
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
                 <label className="label">Voice</label>
                 <select className="input" value={voice} onChange={(e) => setVoice(e.target.value)}>
@@ -261,7 +261,7 @@ export default function CreateAgentWizard() {
 
       {/* Step 2: rules + integrations */}
       {step === 2 && (
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <div className="card space-y-4 p-5">
             <div>
               <h3 className="text-sm font-bold text-slate-900 dark:text-white">
@@ -379,7 +379,7 @@ export default function CreateAgentWizard() {
       {step === 3 && template && (
         <div className="card mx-auto max-w-2xl space-y-4 p-6">
           <h3 className="text-sm font-bold text-slate-900 dark:text-white">Review & launch</h3>
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Review label="Name" value={name} />
             <Review label="Direction" value={direction} />
             <Review label="Template" value={template.name} />
