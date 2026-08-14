@@ -67,7 +67,12 @@ export default function VoiceTester({
       webkitSpeechRecognition?: new () => SpeechRecognitionLike;
       speechSynthesis?: SpeechSynthesis;
     };
-    setSttSupported(!!(w.SpeechRecognition || w.webkitSpeechRecognition));
+    // iPhone/iPad Safari exposes the API but microphone speech-to-text does not
+    // actually work there, so treat iOS as type-only (TTS replies still work).
+    const isIOS =
+      /iP(hone|ad|od)/.test(navigator.userAgent) ||
+      (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    setSttSupported(!!(w.SpeechRecognition || w.webkitSpeechRecognition) && !isIOS);
     setTtsSupported(!!w.speechSynthesis);
     fetch("/api/config")
       .then((r) => r.json())
@@ -283,28 +288,27 @@ export default function VoiceTester({
             <Volume2 className="h-4 w-4" /> Agent is speaking…
           </div>
         ) : sttSupported ? (
-          <div className="flex justify-center">
+          <div className="flex flex-col items-center gap-1">
             <button
-              onMouseDown={startListening}
-              onMouseUp={stopListening}
-              onTouchStart={(e) => {
-                e.preventDefault();
-                startListening();
-              }}
-              onTouchEnd={(e) => {
-                e.preventDefault();
-                stopListening();
-              }}
+              onClick={() => (listening ? stopListening() : startListening())}
               disabled={thinking}
               className={`inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-semibold text-white shadow-pop transition disabled:opacity-50 ${
                 listening ? "animate-pulse bg-rose-500" : "bg-brand-600 hover:bg-brand-700"
               }`}
             >
               <Mic className="h-5 w-5" />
-              {listening ? "Listening — release to send" : "Hold to speak"}
+              {listening ? "Listening… tap to stop" : "Tap to talk"}
             </button>
+            <span className="text-[11px] text-slate-400">…or type below</span>
           </div>
-        ) : null}
+        ) : (
+          <p className="rounded-lg bg-slate-50 px-3 py-2 text-center text-xs text-slate-500 dark:bg-white/5">
+            Type your reply below — the agent will speak the answer out loud.
+            <br />
+            (Microphone speech isn&apos;t supported on iPhone browsers; Chrome on
+            Android or a computer supports talking.)
+          </p>
+        )}
 
         {/* text fallback / alternative */}
         <form
