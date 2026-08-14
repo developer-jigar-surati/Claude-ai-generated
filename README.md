@@ -45,8 +45,22 @@ Open **http://localhost:3000**, sign in with the test credentials above. Done. �
 The first run creates a local database and fills it with sample agents and call
 history so nothing is empty.
 
-**Try it (all live):** *My Agents → Place test call* / *Run 10‑call campaign*,
-the *Intelligent call rescheduling* box, *Create Agent*, and *Pause / Delete*.
+### 🎤 Talk to your agent (real voice, in the browser)
+
+Go to **My Agents → pick an agent → “Start voice call.”** The agent **speaks its
+greeting out loud** and **listens to your microphone** — a real spoken
+conversation, right in your browser. Hold the **mic button** to talk (or type if
+you prefer); the agent replies by voice. Press **End call** and it's saved to
+your dashboard like any other call.
+
+- Works best in **Chrome or Edge** (they support microphone speech‑to‑text).
+  In other browsers you can type and still hear the agent speak.
+- Allow the **microphone permission** when your browser asks.
+- No phone number or paid service needed — this uses your browser's built‑in
+  speech. Add a `VAPI_API_KEY` later to also place **real phone calls**.
+
+**Also try:** *Place test call* / *Run 10‑call campaign*, the *Intelligent call
+rescheduling* box, *Create Agent*, and *Pause / Delete*.
 
 ---
 
