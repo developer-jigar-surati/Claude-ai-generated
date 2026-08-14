@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Database, Sparkles, Mic, PhoneCall } from "lucide-react";
 import type { FeatureFlags } from "@/lib/config";
 
 export default function ConnectionStatus() {
@@ -18,37 +19,42 @@ export default function ConnectionStatus() {
   return (
     <div className="card flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 text-sm">
       <span className="flex items-center gap-2 font-semibold text-slate-900 dark:text-white">
-        <span
-          className={`h-2.5 w-2.5 rounded-full ${
-            f.demoMode ? "bg-amber-400" : "bg-emerald-500"
-          }`}
-        />
-        {f.demoMode ? "Demo mode" : "Live mode"}
+        <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
+        {f.voice ? "Live phone calls enabled" : "Live in-browser voice"}
       </span>
       <span className="text-xs text-slate-500">
-        {f.demoMode
-          ? "Calls are simulated. Add a VAPI_API_KEY in .env to place real calls."
-          : "Placing real calls."}
+        {f.voice
+          ? "Placing real calls via your voice provider."
+          : "Open any agent and press “Start voice call” to talk to it live. Add a Vapi key to also dial real phones."}
       </span>
       <div className="ml-auto flex flex-wrap gap-2">
-        <Chip label="Database" on={f.database} detail="SQLite" />
-        <Chip label="AI (Claude)" on={f.llm} detail={f.llm ? f.model : "built-in parser"} />
-        <Chip label="Voice (Vapi)" on={f.voice} detail={f.voice ? "connected" : "simulated"} />
+        <Chip icon={<Database className="h-3.5 w-3.5" />} label="Database" on={f.database} detail="SQLite / Turso" />
+        <Chip icon={<Sparkles className="h-3.5 w-3.5" />} label="AI" on={f.llm} detail={f.llm ? f.model : "built-in parser"} />
+        <Chip icon={<Mic className="h-3.5 w-3.5" />} label="Browser voice" on detail="ready" />
+        <Chip icon={<PhoneCall className="h-3.5 w-3.5" />} label="Phone calls" on={f.voice} detail={f.voice ? "Vapi connected" : "add Vapi key"} />
       </div>
     </div>
   );
 }
 
-function Chip({ label, on, detail }: { label: string; on: boolean; detail: string }) {
+function Chip({
+  icon,
+  label,
+  on,
+  detail,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  on: boolean;
+  detail: string;
+}) {
   return (
     <span
-      className={`pill ${
-        on ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"
-      }`}
+      className={`pill ${on ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"}`}
       title={detail}
     >
-      <span className={`h-1.5 w-1.5 rounded-full ${on ? "bg-emerald-500" : "bg-slate-400"}`} />
-      {label}: {on ? "on" : "off"}
+      {icon}
+      {label}
     </span>
   );
 }

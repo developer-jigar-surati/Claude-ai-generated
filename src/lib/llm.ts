@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { config, features } from "./config";
 import { detectIntent as heuristicIntent, RescheduleIntent } from "./intent";
+import { Agent } from "./types";
 
 /**
  * LLM layer. When ANTHROPIC_API_KEY is set, real intent detection runs on
@@ -81,4 +82,72 @@ export async function detectIntent(
 
 export function llmEnabled(): boolean {
   return features().llm;
+}
+
+export type Role = "agent" | "customer";
+export interface Turn {
+  role: Role;
+  text: string;
+}
+
+function ruleReply(agent: Agent, intent: string): string {
+  switch (intent) {
+    case "confirm":
+      return "Perfect, you're all set. Thank you for your time — have a great day!";
+    case "reschedule":
+      return "No problem at all, I'll call you back then. Talk to you soon!";
+    case "callback_unspecified":
+      return "Sure, I'll reach out again a little later. Have a great day!";
+    case "not_interested":
+      return "Understood — I won't call again. Thanks, and take care!";
+    default:
+      return `Thanks for that. To help with ${agent.objective.toLowerCase()}, could you tell me a little more?`;
+  }
+}
+
+/**
+ * Generate the agent's spoken reply. Uses Claude when ANTHROPIC_API_KEY is set
+ * (natural conversation), otherwise a friendly rule-based reply. Either way the
+ * browser speaks it aloud.
+ */
+export async function converse(
+  agent: Agent,
+  history: Turn[],
+  userMessage: string
+): Promise<{ reply: string; intent: string; source: "llm" | "rules" }> {
+  const intentRes = await detectIntent(userMessage, agent.rules.rescheduleMinutes);
+  const c = getClient();
+
+  if (c) {
+    try {
+      const company = config.workspaceName;
+      const system = `You are ${agent.name}, a warm, concise ${agent.direction} AI voice agent for ${company}.
+Your objective on this call: ${agent.objective}
+Knowledge you can rely on: ${agent.knowledgeBase || "(none provided)"}
+Rules:
+- Speak naturally, like a real phone agent. Keep replies to 1–2 short sentences.
+- If the customer wants to reschedule, gives a time, or is not interested, acknowledge politely and wrap up warmly.
+- Never mention that you are an AI model.`;
+      const messages = [
+        ...history.map((t) => ({
+          role: (t.role === "agent" ? "assistant" : "user") as "assistant" | "user",
+          content: t.text,
+        })),
+        { role: "user" as const, content: userMessage },
+      ];
+      const resp = await c.messages.create({
+        model: config.anthropicModel,
+        max_tokens: 200,
+        system,
+        messages,
+      });
+      const block = resp.content.find((b) => b.type === "text");
+      const reply = block && "text" in block ? block.text.trim() : "";
+      if (reply) return { reply, intent: intentRes.intent, source: "llm" };
+    } catch {
+      // fall through to rules
+    }
+  }
+
+  return { reply: ruleReply(agent, intentRes.intent), intent: intentRes.intent, source: "rules" };
 }

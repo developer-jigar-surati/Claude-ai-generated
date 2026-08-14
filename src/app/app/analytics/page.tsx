@@ -1,3 +1,4 @@
+import { Phone, Target, CheckCircle2, DollarSign } from "lucide-react";
 import BarChart from "@/components/BarChart";
 import StatCard from "@/components/StatCard";
 import { analyticsSeries, computeStats, listAgentsWithMetrics } from "@/lib/store";
@@ -26,10 +27,10 @@ export default async function AnalyticsPage() {
       </div>
 
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard icon="📞" tint="bg-rose-100 text-rose-600" value={stats.callsToday.toLocaleString()} label="Calls today" delta={`${stats.callsDeltaPct >= 0 ? "+" : ""}${stats.callsDeltaPct}%`} deltaPositive={stats.callsDeltaPct >= 0} />
-        <StatCard icon="🎯" tint="bg-emerald-100 text-emerald-600" value={`${stats.conversionRate}%`} label="Conversion rate" delta={`${stats.conversionDeltaPct >= 0 ? "+" : ""}${stats.conversionDeltaPct}%`} deltaPositive={stats.conversionDeltaPct >= 0} />
-        <StatCard icon="✅" tint="bg-brand-100 text-brand-700" value={stats.conversionsToday.toLocaleString()} label="Conversions today" />
-        <StatCard icon="💲" tint="bg-amber-100 text-amber-600" value={`$${stats.avgCostPerCall.toFixed(2)}`} label="Avg. cost / call" delta={`${stats.costDeltaPct}%`} deltaPositive={stats.costDeltaPct <= 0} />
+        <StatCard icon={<Phone className="h-5 w-5" />} tint="bg-rose-100 text-rose-600" value={stats.callsToday.toLocaleString()} label="Calls today" delta={`${stats.callsDeltaPct >= 0 ? "+" : ""}${stats.callsDeltaPct}%`} deltaPositive={stats.callsDeltaPct >= 0} />
+        <StatCard icon={<Target className="h-5 w-5" />} tint="bg-emerald-100 text-emerald-600" value={`${stats.conversionRate}%`} label="Conversion rate" delta={`${stats.conversionDeltaPct >= 0 ? "+" : ""}${stats.conversionDeltaPct}%`} deltaPositive={stats.conversionDeltaPct >= 0} />
+        <StatCard icon={<CheckCircle2 className="h-5 w-5" />} tint="bg-brand-100 text-brand-700" value={stats.conversionsToday.toLocaleString()} label="Conversions today" />
+        <StatCard icon={<DollarSign className="h-5 w-5" />} tint="bg-amber-100 text-amber-600" value={`$${stats.avgCostPerCall.toFixed(2)}`} label="Avg. cost / call" delta={`${stats.costDeltaPct}%`} deltaPositive={stats.costDeltaPct <= 0} />
       </section>
 
       <section className="grid gap-4 lg:grid-cols-2">

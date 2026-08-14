@@ -1,7 +1,7 @@
 import { Agent, Call, CallOutcome } from "./types";
 import { getTemplate } from "./templates";
 import { config } from "./config";
-import { detectIntent } from "./llm";
+import { detectIntent, Turn } from "./llm";
 import { placeVapiCall, voiceEnabled } from "./voice";
 import { insertCall, makeDay } from "./store";
 
@@ -132,6 +132,41 @@ export async function runCall({ agent, toNumber, utterance }: RunCallInput): Pro
     durationSec: duration,
     cost,
     provider: intentResult.source === "llm" ? "simulator+claude" : "simulator",
+    transcript,
+    startedAt,
+    day: makeDay(startedAt),
+  };
+  return insertCall(call);
+}
+
+/**
+ * Log a completed in-browser voice-test call from its transcript, so it shows
+ * up on the dashboard like any other call.
+ */
+export async function logBrowserVoiceCall(agent: Agent, turns: Turn[]): Promise<Call> {
+  const startedAt = new Date().toISOString();
+  const lastCustomer = [...turns].reverse().find((t) => t.role === "customer");
+  const intentResult = lastCustomer
+    ? await detectIntent(lastCustomer.text, agent.rules.rescheduleMinutes)
+    : { intent: "unknown", source: "heuristic" as const };
+  const outcome = outcomeFromIntent(intentResult.intent);
+  const transcript = turns
+    .map((t) => `${t.role === "agent" ? "Agent" : "Customer"}: ${t.text}`)
+    .join("\n");
+  const customerTurns = turns.filter((t) => t.role === "customer").length;
+
+  const call: Call = {
+    id: newId("call"),
+    agentId: agent.id,
+    direction: agent.direction,
+    toNumber: "Browser voice test",
+    status: "completed",
+    outcome,
+    intent: intentResult.intent,
+    collected: collectedFor(agent, outcome),
+    durationSec: 20 + customerTurns * 12,
+    cost: Math.max(0.05, Math.round((0.02 + customerTurns * 0.03) * 100) / 100),
+    provider: "browser-voice",
     transcript,
     startedAt,
     day: makeDay(startedAt),

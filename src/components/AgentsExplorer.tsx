@@ -4,6 +4,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { AgentWithMetrics, Call, Direction } from "@/lib/types";
 import { getIntegration, INTEGRATION_KIND_LABEL } from "@/lib/integrations";
 import { formatDelay, RescheduleIntent } from "@/lib/intent";
+import VoiceTester from "@/components/VoiceTester";
+import { DirectionIcon } from "@/components/icons";
+import { Phone, Play, Pause, Trash2, Brain, Check, Circle } from "lucide-react";
 
 const STATUS: Record<string, string> = {
   active: "bg-emerald-50 text-emerald-600",
@@ -66,13 +69,13 @@ export default function AgentsExplorer({
               }`}
             >
               <span
-                className={`grid h-10 w-10 place-items-center rounded-xl text-lg ${
+                className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${
                   a.direction === "outbound"
                     ? "bg-brand-100 text-brand-700"
                     : "bg-emerald-100 text-emerald-700"
                 }`}
               >
-                {a.direction === "outbound" ? "📤" : "📥"}
+                <DirectionIcon direction={a.direction} />
               </span>
               <div className="min-w-0 flex-1">
                 <div className="truncate text-sm font-semibold text-slate-900 dark:text-white">
@@ -200,14 +203,26 @@ function AgentDetail({
             disabled={busy !== null}
             onClick={() => placeCall(1)}
           >
-            {busy === "call" ? "Calling…" : "📞 Place test call"}
+            {busy === "call" ? (
+              "Calling…"
+            ) : (
+              <>
+                <Phone className="h-4 w-4" /> Place test call
+              </>
+            )}
           </button>
           <button
             className="btn-secondary"
             disabled={busy !== null}
             onClick={() => placeCall(10)}
           >
-            {busy === "campaign" ? "Running…" : "▶ Run 10-call campaign"}
+            {busy === "campaign" ? (
+              "Running…"
+            ) : (
+              <>
+                <Play className="h-4 w-4" /> Run 10-call campaign
+              </>
+            )}
           </button>
           {agent.status === "active" ? (
             <button
@@ -215,7 +230,7 @@ function AgentDetail({
               disabled={busy !== null}
               onClick={() => setStatus("paused")}
             >
-              ⏸ Pause
+              <Pause className="h-4 w-4" /> Pause
             </button>
           ) : (
             <button
@@ -223,7 +238,7 @@ function AgentDetail({
               disabled={busy !== null}
               onClick={() => setStatus("active")}
             >
-              ▶ Activate
+              <Play className="h-4 w-4" /> Activate
             </button>
           )}
           <button
@@ -231,7 +246,7 @@ function AgentDetail({
             disabled={busy !== null}
             onClick={remove}
           >
-            🗑 Delete
+            <Trash2 className="h-4 w-4" /> Delete
           </button>
         </div>
 
@@ -249,6 +264,20 @@ function AgentDetail({
           <div className="mt-2 text-xs text-slate-500">Objective: {agent.objective}</div>
         </div>
       </div>
+
+      {/* Live in-browser voice test */}
+      <VoiceTester
+        agent={{
+          id: agent.id,
+          name: agent.name,
+          greeting: agent.greeting,
+          voice: agent.voice,
+          objective: agent.objective,
+        }}
+        onEnded={async () => {
+          await Promise.all([onChanged(), loadCalls()]);
+        }}
+      />
 
       {/* Recent calls (live from the database) */}
       <div className="card p-5">
@@ -361,8 +390,8 @@ function IntentDemo({
 
   return (
     <div className="card p-5">
-      <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-        🧠 Intelligent call rescheduling — try it
+      <h3 className="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-white">
+        <Brain className="h-4 w-4 text-brand-600" /> Intelligent call rescheduling — try it
       </h3>
       <p className="mb-3 text-xs text-slate-500">
         Type what a customer might say. The agent detects intent and reschedules automatically.
@@ -442,7 +471,11 @@ function Metric({ label, value }: { label: string; value: string }) {
 function Rule({ ok, label }: { ok: boolean; label: string }) {
   return (
     <div className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200">
-      <span className={ok ? "text-emerald-500" : "text-slate-300"}>{ok ? "✓" : "○"}</span>
+      {ok ? (
+        <Check className="h-4 w-4 shrink-0 text-emerald-500" />
+      ) : (
+        <Circle className="h-4 w-4 shrink-0 text-slate-300" />
+      )}
       {label}
     </div>
   );

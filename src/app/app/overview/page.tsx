@@ -1,4 +1,16 @@
 import Link from "next/link";
+import {
+  Sparkles,
+  Plus,
+  Phone,
+  Bot,
+  Target,
+  DollarSign,
+  PhoneOutgoing,
+  PhoneIncoming,
+  BarChart3,
+  KeyRound,
+} from "lucide-react";
 import StatCard from "@/components/StatCard";
 import LiveMonitor from "@/components/LiveMonitor";
 import AgentRow from "@/components/AgentRow";
@@ -15,12 +27,13 @@ export default async function OverviewPage() {
   return (
     <div className="space-y-6">
       <ConnectionStatus />
+
       {/* Hero + Live monitor */}
       <section className="grid gap-4 lg:grid-cols-[1.7fr_1fr]">
         <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-700 via-brand-600 to-brand-800 p-6 text-white sm:p-8">
           <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-white/10 blur-2xl" />
           <span className="pill bg-white/15 text-white">
-            ✨ Welcome back, Priya
+            <Sparkles className="h-3.5 w-3.5" /> Welcome back, Priya
           </span>
           <h1 className="mt-3 max-w-md text-3xl font-bold leading-tight sm:text-4xl">
             Deploy your next voice agent in minutes
@@ -31,10 +44,10 @@ export default async function OverviewPage() {
           </p>
           <div className="mt-5 flex flex-wrap gap-3">
             <Link href="/app/create" className="btn-primary">
-              ＋ Create new agent
+              <Plus className="h-4 w-4" /> Create new agent
             </Link>
             <Link href="/app/agents" className="btn-ghost">
-              ☎ View my agents
+              <Phone className="h-4 w-4" /> View my agents
             </Link>
           </div>
         </div>
@@ -49,7 +62,7 @@ export default async function OverviewPage() {
       {/* Stat cards */}
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
-          icon="🤖"
+          icon={<Bot className="h-5 w-5" />}
           tint="bg-brand-100 text-brand-700"
           value={String(stats.activeAgents)}
           label="Active agents"
@@ -57,7 +70,7 @@ export default async function OverviewPage() {
           deltaPositive
         />
         <StatCard
-          icon="📞"
+          icon={<Phone className="h-5 w-5" />}
           tint="bg-rose-100 text-rose-600"
           value={stats.callsToday.toLocaleString()}
           label="Calls today"
@@ -65,7 +78,7 @@ export default async function OverviewPage() {
           deltaPositive={stats.callsDeltaPct >= 0}
         />
         <StatCard
-          icon="🎯"
+          icon={<Target className="h-5 w-5" />}
           tint="bg-emerald-100 text-emerald-600"
           value={`${stats.conversionRate}%`}
           label="Conversion rate"
@@ -73,7 +86,7 @@ export default async function OverviewPage() {
           deltaPositive={stats.conversionDeltaPct >= 0}
         />
         <StatCard
-          icon="💲"
+          icon={<DollarSign className="h-5 w-5" />}
           tint="bg-amber-100 text-amber-600"
           value={`$${stats.avgCostPerCall.toFixed(2)}`}
           label="Avg. cost / call"
@@ -97,9 +110,12 @@ export default async function OverviewPage() {
             </Link>
           </div>
           <div className="divide-y divide-slate-100 dark:divide-white/5">
-            {agents.map((a) => (
+            {agents.slice(0, 6).map((a) => (
               <AgentRow key={a.id} agent={a} />
             ))}
+            {agents.length === 0 && (
+              <p className="px-2 py-6 text-sm text-slate-400">No agents yet.</p>
+            )}
           </div>
         </div>
 
@@ -113,25 +129,25 @@ export default async function OverviewPage() {
           <div className="grid gap-3 sm:grid-cols-2">
             <QuickAction
               href="/app/create?direction=outbound"
-              icon="📤"
+              icon={<PhoneOutgoing className="h-5 w-5" />}
               title="New Outbound"
               subtitle="Dial leads & lists"
             />
             <QuickAction
               href="/app/create?direction=inbound"
-              icon="📥"
+              icon={<PhoneIncoming className="h-5 w-5" />}
               title="New Inbound"
               subtitle="24/7 support line"
             />
             <QuickAction
               href="/app/analytics"
-              icon="📊"
+              icon={<BarChart3 className="h-5 w-5" />}
               title="View Analytics"
               subtitle="Calls & conversions"
             />
             <QuickAction
               href="/app/sdk"
-              icon="🔑"
+              icon={<KeyRound className="h-5 w-5" />}
               title="Developer Keys"
               subtitle="SDK & REST API"
             />
@@ -149,7 +165,7 @@ function QuickAction({
   subtitle,
 }: {
   href: string;
-  icon: string;
+  icon: React.ReactNode;
   title: string;
   subtitle: string;
 }) {
@@ -158,7 +174,7 @@ function QuickAction({
       href={href}
       className="group rounded-xl border border-slate-200 p-3 transition hover:border-brand-300 hover:bg-brand-50/40 dark:border-white/10 dark:hover:bg-white/5"
     >
-      <span className="grid h-9 w-9 place-items-center rounded-lg bg-brand-100 text-base text-brand-700">
+      <span className="grid h-9 w-9 place-items-center rounded-lg bg-brand-100 text-brand-700">
         {icon}
       </span>
       <div className="mt-2 text-sm font-semibold text-slate-900 dark:text-white">

@@ -6,6 +6,7 @@ import { INBOUND_TEMPLATES, OUTBOUND_TEMPLATES, defaultRulesFor, getTemplate } f
 import { INTEGRATIONS, INTEGRATION_KIND_LABEL } from "@/lib/integrations";
 import { CampaignRules, Direction } from "@/lib/types";
 import TemplateCard from "@/components/TemplateCard";
+import { Check, CheckCircle2, ChevronLeft, ChevronRight, Rocket } from "lucide-react";
 
 const VOICES = ["Aria (Female, US)", "Leo (Male, US)", "Maya (Female, IN)", "Kabir (Male, IN)", "Sofia (Female, UK)"];
 const LANGUAGES = ["English (US)", "English (UK)", "English (IN)", "Hindi", "Spanish", "German"];
@@ -91,8 +92,8 @@ export default function CreateAgentWizard() {
   if (createdId) {
     return (
       <div className="card mx-auto max-w-lg p-8 text-center">
-        <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-emerald-100 text-3xl">
-          ✅
+        <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-emerald-100 text-emerald-600">
+          <CheckCircle2 className="h-8 w-8" />
         </div>
         <h2 className="mt-4 text-xl font-bold text-slate-900 dark:text-white">
           {name} is live
@@ -134,7 +135,7 @@ export default function CreateAgentWizard() {
                   : "bg-slate-200 text-slate-500 dark:bg-white/10"
               }`}
             >
-              {i < step ? "✓" : i + 1}
+              {i < step ? <Check className="h-3.5 w-3.5" /> : i + 1}
             </span>
             <span className={i <= step ? "text-slate-900 dark:text-white" : "text-slate-400"}>
               {s}
@@ -417,7 +418,7 @@ export default function CreateAgentWizard() {
           disabled={step === 0}
           onClick={() => setStep((s) => Math.max(0, s - 1))}
         >
-          ← Back
+          <ChevronLeft className="h-4 w-4" /> Back
         </button>
         {step < STEPS.length - 1 ? (
           <button
@@ -425,11 +426,17 @@ export default function CreateAgentWizard() {
             disabled={!canNext}
             onClick={() => setStep((s) => s + 1)}
           >
-            Continue →
+            Continue <ChevronRight className="h-4 w-4" />
           </button>
         ) : (
           <button className="btn-primary" disabled={submitting} onClick={launch}>
-            {submitting ? "Deploying…" : "🚀 Deploy agent"}
+            {submitting ? (
+              "Deploying…"
+            ) : (
+              <>
+                <Rocket className="h-4 w-4" /> Deploy agent
+              </>
+            )}
           </button>
         )}
       </div>

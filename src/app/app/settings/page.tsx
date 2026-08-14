@@ -1,3 +1,4 @@
+import { Check, Circle } from "lucide-react";
 import { INTEGRATIONS, INTEGRATION_KIND_LABEL } from "@/lib/integrations";
 import { features } from "@/lib/config";
 
@@ -21,10 +22,10 @@ export default function SettingsPage() {
           simulation — the app still works.
         </p>
         <div className="grid gap-2 sm:grid-cols-2">
-          <StatusRow label="Database" ok={f.database} detail="SQLite (local file)" />
-          <StatusRow label="AI brain (Claude)" ok={f.llm} detail={f.llm ? f.model : "using built-in parser"} />
-          <StatusRow label="Voice calls (Vapi)" ok={f.voice} detail={f.voice ? "connected — real calls" : "simulated calls"} />
-          <StatusRow label="Mode" ok={!f.demoMode} detail={f.demoMode ? "Demo mode" : "Live mode"} />
+          <StatusRow label="Database" ok={f.database} detail="SQLite / Turso" />
+          <StatusRow label="AI brain (Claude)" ok={f.llm} detail={f.llm ? f.model : "built-in parser"} />
+          <StatusRow label="In-browser voice" ok detail="Ready — talk to any agent" />
+          <StatusRow label="Real phone calls (Vapi)" ok={f.voice} detail={f.voice ? "connected" : "add VAPI_API_KEY to enable"} />
         </div>
       </section>
 
@@ -91,11 +92,11 @@ function StatusRow({ label, ok, detail }: { label: string; ok: boolean; detail: 
   return (
     <div className="flex items-center gap-3 rounded-xl border border-slate-200 p-3 dark:border-white/10">
       <span
-        className={`grid h-8 w-8 place-items-center rounded-lg text-sm ${
+        className={`grid h-8 w-8 place-items-center rounded-lg ${
           ok ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500"
         }`}
       >
-        {ok ? "✓" : "○"}
+        {ok ? <Check className="h-4 w-4" /> : <Circle className="h-4 w-4" />}
       </span>
       <div className="flex-1">
         <div className="text-sm font-semibold text-slate-900 dark:text-white">{label}</div>

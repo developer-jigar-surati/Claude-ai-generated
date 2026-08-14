@@ -1,10 +1,12 @@
+import { ArrowUpRight, ArrowDownRight } from "lucide-react";
+
 interface Props {
-  icon: string;
+  icon: React.ReactNode;
   value: string;
   label: string;
   delta?: string;
   deltaPositive?: boolean;
-  tint: string; // tailwind bg for the icon chip
+  tint: string; // tailwind classes for the icon chip
 }
 
 export default function StatCard({
@@ -18,11 +20,7 @@ export default function StatCard({
   return (
     <div className="card p-4">
       <div className="flex items-start justify-between">
-        <span
-          className={`grid h-9 w-9 place-items-center rounded-xl text-base ${tint}`}
-        >
-          {icon}
-        </span>
+        <span className={`grid h-9 w-9 place-items-center rounded-xl ${tint}`}>{icon}</span>
         {delta && (
           <span
             className={`pill ${
@@ -31,7 +29,12 @@ export default function StatCard({
                 : "bg-rose-50 text-rose-600"
             }`}
           >
-            {deltaPositive ? "↗" : "↘"} {delta}
+            {deltaPositive ? (
+              <ArrowUpRight className="h-3 w-3" />
+            ) : (
+              <ArrowDownRight className="h-3 w-3" />
+            )}
+            {delta}
           </span>
         )}
       </div>

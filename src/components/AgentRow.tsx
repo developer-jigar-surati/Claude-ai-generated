@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Agent } from "@/lib/types";
+import { DirectionIcon } from "@/components/icons";
 
 const STATUS: Record<string, string> = {
   active: "bg-emerald-50 text-emerald-600",
@@ -14,13 +15,13 @@ export default function AgentRow({ agent }: { agent: Agent }) {
       className="flex items-center gap-3 rounded-xl px-3 py-3 transition hover:bg-slate-50 dark:hover:bg-white/5"
     >
       <span
-        className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl text-lg ${
+        className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${
           agent.direction === "outbound"
             ? "bg-brand-100 text-brand-700"
             : "bg-emerald-100 text-emerald-700"
         }`}
       >
-        {agent.direction === "outbound" ? "📤" : "📥"}
+        <DirectionIcon direction={agent.direction} />
       </span>
       <div className="min-w-0 flex-1">
         <div className="truncate text-sm font-semibold text-slate-900 dark:text-white">
